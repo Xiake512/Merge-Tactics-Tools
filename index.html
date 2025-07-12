@@ -39,6 +39,10 @@
       justify-content: center;
       position: absolute;
       cursor: pointer;
+      user-select: none;
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
     }
     .hex img {
       max-width: 100%;
@@ -86,6 +90,29 @@
       cursor: pointer;
       margin: 4px;
     }
+    .card-popup {
+      position: fixed;
+      background: #2a2f3b;
+      border: 2px solid #4fff4f;
+      border-radius: 8px;
+      padding: 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      max-width: 300px;
+      z-index: 1000;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    }
+    .card-popup .card {
+      width: 40px;
+      height: 40px;
+      border-radius: 6px;
+    }
+    .card-popup .card:hover {
+      border-color: #4fff4f;
+      transform: scale(1.1);
+      transition: all 0.2s ease;
+    }
   </style>
 </head>
 <body>
@@ -106,6 +133,7 @@
     const rows = 8, cols = 5;
     const hexWidth = 60, hexHeight = 52;
     let selectedCard = null;
+    let currentPopup = null;
 
     const traitMap = {
       archer: ["Clan", "Ranger"],
@@ -147,6 +175,83 @@
       (traitMap[name] || []).forEach(t => traitCount[t] = Math.max(0, (traitCount[t] || 0) - 1));
       updateTraitsDisplay();
     }
+    function recalculateTraits() {
+      Object.keys(traitCount).forEach(key => traitCount[key] = 0);
+      const uniqueCardNames = new Set();
+      document.querySelectorAll('.hex img[data-name]').forEach(img => {
+        const cardName = img.dataset.name;
+        if (cardName && traitMap[cardName]) {
+          uniqueCardNames.add(cardName);
+        }
+      });
+      uniqueCardNames.forEach(cardName => {
+        traitMap[cardName].forEach(t => traitCount[t] = (traitCount[t] || 0) + 1);
+      });
+      updateTraitsDisplay();
+    }
+
+    function closePopup() {
+      if (currentPopup) {
+        currentPopup.remove();
+        currentPopup = null;
+      }
+    }
+
+    function showCardPopup(hex, event) {
+      closePopup();
+      
+      const popup = document.createElement("div");
+      popup.className = "card-popup";
+      
+      const rect = hex.getBoundingClientRect();
+      
+      const hexCenterX = rect.left + rect.width / 2;
+      const windowCenterX = window.innerWidth / 2;
+      
+      let left, top;
+      
+      if (hexCenterX < windowCenterX) {
+        left = rect.left - 320;
+        top = rect.top;
+      } else {
+        left = rect.right + 20;
+        top = rect.top;
+      }
+      
+      if (left < 10) left = 10;
+      if (left + 300 > window.innerWidth) left = window.innerWidth - 310;
+      
+      popup.style.left = `${left}px`;
+      popup.style.top = `${top}px`;
+      
+      const cardNames = Object.keys(traitMap);
+      cardNames.forEach(name => {
+        const card = document.createElement("div");
+        card.classList.add("card");
+        card.innerHTML = `<img src="images/${name}.png" />`;
+        card.onclick = (e) => {
+          e.stopPropagation();
+          const existingImg = hex.querySelector("img");
+          if (existingImg) {
+            hex.innerHTML = "";
+          }
+          hex.innerHTML = `<img src="images/${name}.png" data-name="${name}" draggable="true" style="pointer-events: auto;" />`;
+          closePopup();
+          setTimeout(recalculateTraits, 10);
+        };
+        popup.appendChild(card);
+      });
+      
+      document.body.appendChild(popup);
+      currentPopup = popup;
+      
+      document.addEventListener('click', function closeHandler(e) {
+        if (!popup.contains(e.target) && !hex.contains(e.target)) {
+          closePopup();
+          document.removeEventListener('click', closeHandler);
+        }
+      });
+    }
 
     for (let y = 0; y < rows; y++) {
       for (let x = 0; x < cols; x++) {
@@ -155,33 +260,99 @@
         hex.style.left = `${x * hexWidth + (y % 2 === 0 ? hexWidth / 2 : 0)}px`;
         hex.style.top = `${y * (hexHeight * 0.82)}px`;
 
-        hex.onclick = () => {
+        hex.onclick = (event) => {
+          event.stopPropagation();
+
           const existingImg = hex.querySelector("img");
           if (existingImg) {
-            removeTraits(existingImg.dataset.name);
             hex.innerHTML = "";
+            setTimeout(recalculateTraits, 10);
             return;
           }
           if (selectedCard) {
-            hex.innerHTML = `<img src="images/${selectedCard}.png" data-name="${selectedCard}" />`;
-            addTraits(selectedCard);
+            hex.innerHTML = `<img src="images/${selectedCard}.png" data-name="${selectedCard}" draggable="true" style="pointer-events: auto;" />`;
             document.querySelectorAll(".card").forEach(c => c.classList.remove("selected"));
             selectedCard = null;
+            setTimeout(recalculateTraits, 10);
+          } else {
+            showCardPopup(hex, event);
           }
         };
 
-        hex.ondragover = e => e.preventDefault();
+        hex.ondragover = e => {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'move';
+        };
+        
         hex.ondrop = e => {
           e.preventDefault();
-          const name = e.dataTransfer.getData("card-name");
-          const imgURL = e.dataTransfer.getData("text/plain");
-          if (!hex.querySelector("img")) {
-            hex.innerHTML = `<img src="${imgURL}" data-name="${name}" />`;
-            addTraits(name);
+          
+          const draggedCardName = e.dataTransfer.getData("dragged-card-name");
+          const draggedImgSrc = e.dataTransfer.getData("dragged-img-src");
+          
+          if (draggedCardName && draggedImgSrc) {
+            const existingImg = hex.querySelector("img");
+            
+            const draggedImg = document.querySelector('.hex img[style*="opacity: 0.5"]');
+            const sourceHex = draggedImg ? draggedImg.parentElement : null;
+            
+            if (!existingImg) {
+              hex.innerHTML = `<img src="${draggedImgSrc}" data-name="${draggedCardName}" draggable="true" style="pointer-events: auto;" />`;
+              
+              if (sourceHex) {
+                sourceHex.innerHTML = "";
+              }
+              
+              setTimeout(recalculateTraits, 10);
+            } else {
+              const existingCardName = existingImg.dataset.name;
+              const existingImgSrc = existingImg.src;
+              
+              hex.innerHTML = `<img src="${draggedImgSrc}" data-name="${draggedCardName}" draggable="true" style="pointer-events: auto;" />`;
+              
+              if (sourceHex) {
+                sourceHex.innerHTML = `<img src="${existingImgSrc}" data-name="${existingCardName}" draggable="true" style="pointer-events: auto;" />`;
+              }
+              
+              setTimeout(recalculateTraits, 10);
+            }
+          } else {
+            const cardName = e.dataTransfer.getData("card-name");
+            const imgURL = e.dataTransfer.getData("text/plain");
+            
+            if (cardName && imgURL) {
+              const existingImg = hex.querySelector("img");
+              hex.innerHTML = `<img src="${imgURL}" data-name="${cardName}" draggable="true" style="pointer-events: auto;" />`;
+              setTimeout(recalculateTraits, 10);
+            }
           }
         };
 
         board.appendChild(hex);
+        
+        hex.addEventListener('dragstart', function(e) {
+          if (e.target.tagName === 'IMG' && e.target.dataset.name) {
+            const cardName = e.target.dataset.name;
+            const imgSrc = e.target.src;
+            
+            e.dataTransfer.setData("dragged-card-name", cardName);
+            e.dataTransfer.setData("dragged-img-src", imgSrc);
+            e.dataTransfer.effectAllowed = 'move';
+            e.target.style.opacity = '0.5';
+          }
+        });
+        
+        hex.addEventListener('selectstart', function(e) {
+          e.preventDefault();
+        });
+        
+        hex.addEventListener('dragend', function(e) {
+          document.querySelectorAll('.hex img[style*="opacity: 0.5"]').forEach(img => {
+            img.style.opacity = '1';
+          });
+        });
+        
+
       }
     }
 
@@ -189,7 +360,12 @@
       document.querySelectorAll(".hex").forEach(hex => hex.innerHTML = "");
       Object.keys(traitCount).forEach(key => traitCount[key] = 0);
       updateTraitsDisplay();
+      closePopup();
     }
+    
+    window.addEventListener('load', function() {
+      setTimeout(recalculateTraits, 100);
+    });
 
     const cardNames = Object.keys(traitMap);
     cardNames.forEach(name => {
