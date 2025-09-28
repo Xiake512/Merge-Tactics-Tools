@@ -135,27 +135,36 @@
     let selectedCard = null;
     let currentPopup = null;
 
-    const traitMap = {
-      archer: ["Clan", "Ranger"],
-      archer_queen: ["Clan", "Avenger"],
-      bandit: ["Ace", "Avenger"],
-      barbarian: ["Clan", "Brawler"],
-      bomber: ["Undead", "Thrower"],
-      goblin: ["Goblin", "Assassin"],
-      dart_goblin: ["Goblin", "Ranger"],
-      executioner: ["Ace", "Thrower"],
-      giant_skeleton: ["Undead", "Brawler"],
-      goblin_machine: ["Goblin", "Juggernaut"],
-      golden_knight: ["Noble", "Assassin"],
-      knight: ["Noble", "Juggernaut"],
-      mega_knight: ["Ace", "Brawler"],
-      pekka: ["Ace", "Juggernaut"],
-      prince: ["Noble", "Brawler"],
-      princess: ["Noble", "Ranger"],
-      royal_ghost: ["Undead", "Assassin"],
-      skeleton_king: ["Undead", "Juggernaut"],
-      spear_goblin: ["Goblin", "Thrower"],
-      valkyrie: ["Clan", "Avenger"],
+const traitMap = {
+  archer: ["Clan", "Ranger"],
+  archer_queen: ["Clan", "Avenger"],
+  bandit: ["Ace", "Assassin"],          // 從 Avenger → Assassin
+  barbarian: ["Clan", "Brawler"],
+  // bomber: ["Undead", "Thrower"],     // 已移除
+  goblin: ["Goblin", "Assassin"],
+  dart_goblin: ["Goblin", "Ranger"],
+  executioner: ["Ace", "Blaster"],      // 從 Thrower → Blaster
+  giant_skeleton: ["Undead", "Brawler"],
+  goblin_machine: ["Goblin", "Juggernaut"],
+  golden_knight: ["Noble", "Assassin"],
+  knight: ["Noble", "Juggernaut"],
+  mega_knight: ["Ace", "Brawler"],
+  pekka: ["Ace", "Avenger"],            // 從 Juggernaut → Avenger
+  prince: ["Noble", "Brawler"],
+  princess: ["Noble", "Ranger"],
+  royal_ghost: ["Undead", "Assassin"],
+  skeleton_king: ["Undead", "Juggernaut"],
+  spear_goblin: ["Goblin", "Blaster"],  // 從 Thrower → Blaster
+  valkyrie: ["Clan", "Juggernaut"],     // 從 Avenger → Juggernaut
+
+  // 🔥 新角色
+  skeleton_dragon: ["Undead", "Ranger"],
+  wizard: ["Fire", "Mage"],
+  electro_giant: ["Electric", "Avenger"],
+  musketeer: ["Noble", "Blaster"],
+  baby_dragon: ["Fire", "Blaster"],
+  electro_wizard: ["Electric", "Mage"],
+  witch: ["Undead", "Avenger"]
     };
 
     const traitCount = {};
@@ -391,4 +400,5 @@
     });
   </script>
 </body>
+
 </html>
